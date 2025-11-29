@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch_geometric.nn as gnn
+from torch_scatter import scatter_max
 
 from cosmic import *
 
@@ -49,7 +50,7 @@ class MnistModel(nn.Module):
         for layer in self.cosmo_layers:
             features = layer(L.source, L.target, features, L.hood_coords)
         mol_features, max_indices = scatter_max(
-            features, L.lifted2inst, data.num_molecules
+            features, L.lifted2inst, dim_size=data.num_molecules, dim=0
         )
         return mol_features, mol_features, max_indices
 
@@ -98,7 +99,7 @@ class Beta2DModel(nn.Module):
         for layer in self.cosmo_layers:
             features = layer(L.source, L.target, features, L.hood_coords)
         mol_features, max_indices = scatter_max(
-            features, L.lifted2inst, data.num_molecules
+            features, L.lifted2inst, dim_size=data.num_molecules, dim=0
         )
         return mol_features, mol_features, max_indices
 
@@ -146,7 +147,7 @@ class Beta3DModel(nn.Module):
         for layer in self.cosmo_layers:
             features = layer(L.source, L.target, features, L.hood_coords)
         mol_features, max_indices = scatter_max(
-            features, L.lifted2inst, data.num_molecules
+            features, L.lifted2inst, dim_size=data.num_molecules, dim=0
         )
         return mol_features, mol_features, max_indices
 
@@ -215,7 +216,9 @@ class QM9Model(nn.Module):
             features = norm(features)
             all_features.append(features.clone())
         all_features = torch.stack(all_features, dim=1).mean(dim=1)
-        mol_features = scatter_max(all_features, L.lifted2inst, data.num_molecules)[0]
+        mol_features = scatter_max(
+            all_features, L.lifted2inst, dim_size=data.num_molecules, dim=0
+        )[0]
         logits = self.mlp(mol_features)
         torch.cuda.empty_cache()
         return logits, None, None
