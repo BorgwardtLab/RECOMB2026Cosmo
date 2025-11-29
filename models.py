@@ -46,11 +46,11 @@ class MnistModel(nn.Module):
         pos = data.atom_pos.float()
         edge_index = gnn.radius_graph(pos, self.eps, data.vertex2molecule)
         L = self.lift(features, pos, edge_index, data.vertex2molecule)
-        features = L.edge_features
+        features = L.features
         for layer in self.cosmo_layers:
-            features = layer(L.ij, L.jk, features, L.hood_coords)
+            features = layer(L.source, L.target, features, L.hood_coords)
         mol_features, max_indices = scatter_max(
-            features, L.edge2inst, dim_size=data.num_molecules, dim=0
+            features, L.lifted2inst, dim_size=data.num_molecules, dim=0
         )
         return mol_features, mol_features, max_indices
 
@@ -95,11 +95,11 @@ class Beta2DModel(nn.Module):
         pos = data.atom_pos.float()
         edge_index = data.molecule_edges.T
         L = self.lift(features, pos, edge_index, data.vertex2molecule)
-        features = L.edge_features
+        features = L.features
         for layer in self.cosmo_layers:
-            features = layer(L.ij, L.jk, features, L.hood_coords)
+            features = layer(L.source, L.target, features, L.hood_coords)
         mol_features, max_indices = scatter_max(
-            features, L.edge2inst, dim_size=data.num_molecules, dim=0
+            features, L.lifted2inst, dim_size=data.num_molecules, dim=0
         )
         return mol_features, mol_features, max_indices
 
@@ -143,11 +143,11 @@ class Beta3DModel(nn.Module):
         pos = data.atom_pos.float()
         edge_index = data.molecule_edges.T
         L = self.lift(features, pos, edge_index, data.vertex2molecule)
-        features = L.tri_features
+        features = L.features
         for layer in self.cosmo_layers:
-            features = layer(L.ijk, L.jkl, features, L.hood_coords)
+            features = layer(L.source, L.target, features, L.hood_coords)
         mol_features, max_indices = scatter_max(
-            features, L.tri2inst, dim_size=data.num_molecules, dim=0
+            features, L.lifted2inst, dim_size=data.num_molecules, dim=0
         )
         return mol_features, mol_features, max_indices
 
@@ -209,15 +209,15 @@ class QM9Model(nn.Module):
         pos = data.atom_pos.float()
         edge_index = gnn.knn_graph(pos, self.k, data.vertex2molecule)
         L = self.lift(features, pos, edge_index, data.vertex2molecule)
-        features = L.tri_features
+        features = L.features
         all_features = []
         for layer, norm in zip(self.cosmo_layers, self.cosmo_norms):
-            features = layer(L.ijk, L.jkl, features, L.hood_coords)
+            features = layer(L.source, L.target, features, L.hood_coords)
             features = norm(features)
             all_features.append(features.clone())
         all_features = torch.stack(all_features, dim=1).mean(dim=1)
         mol_features = scatter_max(
-            all_features, L.tri2inst, dim_size=data.num_molecules, dim=0
+            all_features, L.lifted2inst, dim_size=data.num_molecules, dim=0
         )[0]
         logits = self.mlp(mol_features)
         torch.cuda.empty_cache()
