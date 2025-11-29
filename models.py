@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch_geometric.nn as gnn
-from torch_scatter import scatter_max
 
 from cosmic import *
 

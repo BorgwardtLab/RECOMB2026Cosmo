@@ -14,9 +14,9 @@ from bioverse.factory import BenchmarkFactory, TransformFactory
 from bioverse.trainer import Trainer
 from bioverse.utilities import config as CONFIG
 from omegaconf import OmegaConf
-from torch_scatter import scatter_sum
 
 import models
+from cosmic import scatter_sum
 
 args = argparse.ArgumentParser()
 args.add_argument("exp", type=str)
