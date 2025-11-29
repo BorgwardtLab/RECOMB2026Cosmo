@@ -3,3 +3,6 @@ cosmic-torch
 torch_geometric
 scipy
 plotly
+rdkit
+lightning
+comet_ml
