@@ -1,5 +1,3 @@
-torch
-torch_scatter
 bioverse-ml
 cosmic-torch
 torch-geometric

@@ -217,12 +217,9 @@ for (X, y), data in loader:
         edge_index,
         data.vertex2molecule,
     )
-    if EXP in ["mnist", "beta2d"]:
-        L.ijk = L.ij
-        L.jkl = L.jk
-        L.tri2node = L.edge2node
     edge_adj = torch.sparse_coo_tensor(
-        torch.stack([L.ijk, L.jkl]), torch.arange(L.ijk.shape[0]).to(L.ijk.device)
+        torch.stack([L.source, L.target]),
+        torch.arange(L.source.shape[0]).to(L.source.device),
     )
 
     # get activations
@@ -239,7 +236,7 @@ for (X, y), data in loader:
     for class_num, max_index in enumerate(max_indices[0]):
         edges = max_index.unsqueeze(0)
         layers = model.cosmo_layers
-        fields = torch.eye(layers[-1].out_channels).unsqueeze(0).to(L.ijk.device)
+        fields = torch.eye(layers[-1].out_channels).unsqueeze(0).to(L.source.device)
 
         for i in range(len(layers), 0, -1):
             layer = layers[i - 1]
@@ -249,7 +246,7 @@ for (X, y), data in loader:
 
             src, dst = torch.index_select(edge_adj, 1, edges).coalesce().indices()
             R = L.bases[edges[dst]]
-            hood = L.coords[L.tri2node[src]] - L.coords[L.tri2node[edges[dst]]]
+            hood = L.coords[L.lifted2node[src]] - L.coords[L.lifted2node[edges[dst]]]
             hood = torch.bmm(R, hood.unsqueeze(-1)).squeeze(-1)
             hood = hood / layer.radius
             w = field(hood).view(-1, out_channels, in_channels)
@@ -267,7 +264,7 @@ for (X, y), data in loader:
             edges = src
         # sum fields to edges
         fields = scatter_sum(
-            fields, L.tri2node[edges], dim_size=data.num_vertices.sum(), dim=0
+            fields, L.lifted2node[edges], dim_size=data.num_vertices.sum(), dim=0
         )
         # collect per-node activation values for the current output channel across input channels (no averaging)
         vals_ic = fields[:, class_num, :]  # shape: num_nodes x in_channels
